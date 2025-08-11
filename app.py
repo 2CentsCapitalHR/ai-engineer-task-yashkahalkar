@@ -1,13 +1,28 @@
 import streamlit as st
 import os
+import tempfile
+import json
+from datetime import datetime
+
+# Streamlit secrets integration
+def get_env_var(key: str, default: str = None) -> str:
+    """Get environment variable with Streamlit secrets fallback"""
+    try:
+        return st.secrets[key]
+    except (KeyError, FileNotFoundError, AttributeError):
+        value = os.getenv(key, default)
+        if not value and default is None:
+            st.error(f"❌ Missing: {key}")
+            st.write("Set this in Streamlit Cloud → Settings → Secrets")
+            st.stop()
+        return value or default
+
+# Import components
 from components.document_parser import DocumentParser
 from components.rag_engine import RAGEngine
 from components.compliance_checker import ComplianceChecker
 from components.comment_injector import CommentInjector
 from models.gemini_client import GeminiClient
-import tempfile
-import json
-from datetime import datetime
 
 # Load environment variables
 def get_env_var(key: str, default: str = None) -> str:
