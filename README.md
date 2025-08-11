@@ -30,7 +30,7 @@
 - [Pinecone account](https://www.pinecone.io/)
 
 ### 1-Minute Setup
-git clone https://github.com/your-username/adgm-corporate-agent.git
+clone the repo
 cd adgm-corporate-agent
 pip install -r requirements.txt
 cp .env.example .env
