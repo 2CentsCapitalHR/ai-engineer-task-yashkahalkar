@@ -12,6 +12,8 @@
 
 **ADGM Corporate Agent** is a production-ready AI assistant that analyzes legal documents for Abu Dhabi Global Market (ADGM) compliance. It uses RAG (Retrieval Augmented Generation) with official ADGM templates to provide professional-grade legal document analysis.
 
+video demo link : https://drive.google.com/file/d/1NcN5oK-7t9T9nLVe0aFZltp9FO4wjdk6/view?usp=drive_link
+
 ### ✨ Key Features
 
 - 🔍 **Smart Document Analysis** - Multi-document processing with auto-detection
