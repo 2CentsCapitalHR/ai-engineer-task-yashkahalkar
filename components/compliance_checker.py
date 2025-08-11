@@ -1,6 +1,7 @@
 from typing import Dict, List, Any
 import re
 from datetime import datetime
+import streamlit as st
 
 class ComplianceChecker:
     def __init__(self):
@@ -10,185 +11,168 @@ class ComplianceChecker:
                     'Articles of Association',
                     'Memorandum of Association',
                     'Board Resolution',
-                    'UBO Declaration Form',
-                    'Register of Members and Directors'
+                    'UBO Declaration Form'
                 ],
                 'mandatory_clauses': [
                     'registered office',
-                    'share capital',
-                    'objects clause',
-                    'liability clause',
-                    'directors powers'
+                    'share capital', 
+                    'directors',
+                    'liability',
+                    'objects'  # Simplified from 'objects clause'
                 ],
                 'jurisdiction_requirements': ['ADGM', 'Abu Dhabi Global Market']
-            },
-            'Business Licensing': {
-                'required_documents': [
-                    'License Application Form',
-                    'Business Plan',
-                    'Articles of Association',
-                    'Commercial License'
-                ],
-                'mandatory_clauses': [
-                    'business activities',
-                    'registered office',
-                    'authorized activities'
-                ],
-                'jurisdiction_requirements': ['ADGM']
-            },
-            'Constitutional Amendments': {
-                'required_documents': [
-                    'Board Resolution',
-                    'Shareholder Resolution',
-                    'Amended Articles'
-                ],
-                'mandatory_clauses': [
-                    'amendment clause',
-                    'special resolution',
-                    'effective date'
-                ],
-                'jurisdiction_requirements': ['ADGM']
             }
         }
         
         self.red_flag_patterns = [
             {
-                'pattern': r'UAE Federal Court|Dubai Court|Abu Dhabi Court(?!.*ADGM)',
+                'pattern': r'UAE Federal Court|Dubai Court',
                 'issue': 'Incorrect jurisdiction - should specify ADGM Courts',
                 'severity': 'High',
                 'category': 'jurisdiction'
             },
             {
-                'pattern': r'UAE Commercial Code(?!.*ADGM)',
-                'issue': 'Reference to UAE Commercial Code instead of ADGM regulations',
-                'severity': 'High',
-                'category': 'jurisdiction'
-            },
-            {
-                'pattern': r'\[.*\]|\{.*\}|TBD|TO BE DETERMINED',
+                'pattern': r'\[.*\]|TBD|TO BE DETERMINED',
                 'issue': 'Template placeholder not filled',
-                'severity': 'Medium',
+                'severity': 'Medium', 
                 'category': 'completeness'
-            },
-            {
-                'pattern': r'shall be deemed|may be construed|could be interpreted',
-                'issue': 'Ambiguous legal language',
-                'severity': 'Medium',
-                'category': 'clarity'
-            },
-            {
-                'pattern': r'(?i)witness.*signature.*(?!.*ADGM)',
-                'issue': 'Signature section may not comply with ADGM requirements',
-                'severity': 'Low',
-                'category': 'formatting'
             }
         ]
-    
+
     def check_document(self, doc_data: Dict[str, Any], process_type: str) -> Dict[str, Any]:
-        """Perform comprehensive compliance check"""
-        issues = []
+        """HEAVILY DEBUGGED compliance check"""
+        print("=" * 80)
+        print(f"🔍 STARTING COMPLIANCE CHECK DEBUG")
+        print("=" * 80)
         
-        # Check document type requirements
-        doc_type_issues = self._check_document_type_requirements(doc_data, process_type)
-        issues.extend(doc_type_issues)
+        # Debug document data
+        print(f"📄 Document filename: {doc_data.get('filename', 'UNKNOWN')}")
+        print(f"📄 Document type: {doc_data.get('document_type', 'UNKNOWN')}")
+        print(f"🔧 Process type: {process_type}")
         
-        # Check for red flags
-        red_flag_issues = self._detect_red_flags(doc_data)
-        issues.extend(red_flag_issues)
-        
-        # Check mandatory clauses
-        clause_issues = self._check_mandatory_clauses(doc_data, process_type)
-        issues.extend(clause_issues)
-        
-        # Check jurisdiction compliance
-        jurisdiction_issues = self._check_jurisdiction_compliance(doc_data, process_type)
-        issues.extend(jurisdiction_issues)
-        
-        # Check formatting requirements
-        format_issues = self._check_formatting_requirements(doc_data)
-        issues.extend(format_issues)
-        
-        # Check signature requirements
-        signature_issues = self._check_signature_requirements(doc_data)
-        issues.extend(signature_issues)
-        
-        # Calculate compliance score
-        total_checks = 6
-        failed_checks = len(set(issue['category'] for issue in issues))
-        compliance_score = max(0, (total_checks - failed_checks) / total_checks * 100)
-        
-        return {
-            'is_compliant': len(issues) == 0,
-            'compliance_score': compliance_score,
-            'total_issues': len(issues),
-            'issues': issues,
-            'checked_categories': [
-                'document_type',
-                'red_flags',
-                'mandatory_clauses',
-                'jurisdiction',
-                'formatting',
-                'signatures'
-            ]
-        }
-    
-    def _check_document_type_requirements(self, doc_data: Dict[str, Any], process_type: str) -> List[Dict[str, Any]]:
-        """Check if document type matches process requirements"""
-        issues = []
-        
-        if process_type not in self.process_requirements:
-            return issues
-        
-        requirements = self.process_requirements[process_type]
-        doc_type = doc_data.get('document_type', 'Unknown')
-        
-        # Check if document type is in required documents list
-        if doc_type not in requirements['required_documents'] and doc_type != 'Unknown Document Type':
-            issues.append({
-                'location': 'Document Type',
-                'issue': f'Document type "{doc_type}" may not be required for {process_type}',
-                'severity': 'Medium',
-                'category': 'document_type',
-                'suggestion': f'Verify if this document is needed for {process_type}'
-            })
-        
-        return issues
-    
-    def _detect_red_flags(self, doc_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Detect red flags in document content"""
-        issues = []
+        # CRITICAL: Debug document content
         content = doc_data.get('content', '')
+        print(f"📝 Content length: {len(content)} characters")
+        print(f"📝 Content preview (first 200 chars): {content[:200]}...")
+        print(f"📝 Content preview (last 200 chars): ...{content[-200:]}")
         
-        for flag in self.red_flag_patterns:
-            matches = re.finditer(flag['pattern'], content, re.IGNORECASE)
-            
-            for match in matches:
-                # Find the paragraph containing the match
-                location = self._find_paragraph_location(content, match.start())
-                
-                issues.append({
-                    'location': location,
-                    'issue': flag['issue'],
-                    'severity': flag['severity'],
-                    'category': flag['category'],
-                    'suggestion': self._get_red_flag_suggestion(flag['category'], flag['issue']),
-                    'matched_text': match.group()
-                })
+        # Check if content is empty
+        if not content or len(content.strip()) < 50:
+            st.error("❌ CRITICAL: Document content is empty or too short!")
+            print("❌ CRITICAL: Document content is empty or too short!")
+            return {
+                'is_compliant': False,
+                'compliance_score': 0,
+                'total_issues': 1,
+                'positive_matches': 0,
+                'issues': [{'issue': 'Document content is empty or unreadable', 'severity': 'High'}],
+                'debug_error': 'Empty content'
+            }
         
-        return issues
-    
-    def _check_mandatory_clauses(self, doc_data: Dict[str, Any], process_type: str) -> List[Dict[str, Any]]:
-        """Check for mandatory clauses based on process type"""
         issues = []
+        positive_matches = []
+        
+        try:
+            print("\n🔍 CHECKING MANDATORY CLAUSES...")
+            mandatory_results = self._debug_mandatory_clauses(doc_data, process_type)
+            issues.extend(mandatory_results['issues'])
+            positive_matches.extend(mandatory_results['matches'])
+            
+            print(f"✅ Mandatory clause results: {len(mandatory_results['issues'])} issues, {len(mandatory_results['matches'])} matches")
+            
+            print("\n🔍 CHECKING JURISDICTION...")
+            jurisdiction_results = self._debug_jurisdiction(doc_data)
+            issues.extend(jurisdiction_results['issues'])
+            positive_matches.extend(jurisdiction_results['matches'])
+            
+            print(f"✅ Jurisdiction results: {len(jurisdiction_results['issues'])} issues, {len(jurisdiction_results['matches'])} matches")
+            
+            print("\n🔍 CHECKING RED FLAGS...")
+            red_flag_issues = self._debug_red_flags(doc_data)
+            issues.extend(red_flag_issues)
+            
+            print(f"✅ Red flag results: {len(red_flag_issues)} issues")
+            
+            print(f"\n📊 TOTAL SUMMARY:")
+            print(f"   Issues: {len(issues)}")
+            print(f"   Positive matches: {len(positive_matches)}")
+            
+            # Calculate score with extreme debugging
+            compliance_score = self._debug_calculate_score(issues, positive_matches, process_type)
+            
+            print(f"\n🎯 FINAL COMPLIANCE SCORE: {compliance_score}%")
+            print("=" * 80)
+            
+            return {
+                'is_compliant': compliance_score >= 80,
+                'compliance_score': compliance_score,
+                'total_issues': len(issues),
+                'positive_matches': len(positive_matches),
+                'issues': issues,
+                'debug_info': {
+                    'content_length': len(content),
+                    'mandatory_matches': len(mandatory_results['matches']),
+                    'jurisdiction_matches': len(jurisdiction_results['matches']),
+                    'content_preview': content[:100]
+                }
+            }
+            
+        except Exception as e:
+            print(f"❌ EXCEPTION in compliance check: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'is_compliant': False,
+                'compliance_score': 0,
+                'total_issues': 0,
+                'positive_matches': 0,
+                'issues': [{'issue': f'Compliance check failed: {str(e)}', 'severity': 'High'}],
+                'error': str(e)
+            }
+
+    def _debug_mandatory_clauses(self, doc_data: Dict[str, Any], process_type: str) -> Dict:
+        """Debug mandatory clause detection"""
+        print(f"🔍 Checking mandatory clauses for process: {process_type}")
+        
+        issues = []
+        matches = []
         
         if process_type not in self.process_requirements:
-            return issues
+            print(f"❌ Process type '{process_type}' not recognized!")
+            return {'issues': issues, 'matches': matches}
         
         requirements = self.process_requirements[process_type]
+        required_clauses = requirements['mandatory_clauses']
         content = doc_data.get('content', '').lower()
         
-        for clause in requirements['mandatory_clauses']:
-            if clause.lower() not in content:
+        print(f"🔍 Required clauses: {required_clauses}")
+        print(f"🔍 Searching in content (length: {len(content)})")
+        
+        for clause in required_clauses:
+            # Make detection more flexible
+            clause_variations = [
+                clause.lower(),
+                clause.lower().replace(' ', ''),
+                f"{clause.lower()} of",
+                f"the {clause.lower()}"
+            ]
+            
+            found = False
+            for variation in clause_variations:
+                if variation in content:
+                    found = True
+                    print(f"✅ FOUND: '{clause}' (matched: '{variation}')")
+                    matches.append({
+                        'category': 'mandatory_clauses',
+                        'clause': clause,
+                        'content': clause,
+                        'found': True,
+                        'matched_variation': variation
+                    })
+                    break
+            
+            if not found:
+                print(f"❌ MISSING: '{clause}' - none of {clause_variations} found in content")
                 issues.append({
                     'location': 'Document Content',
                     'issue': f'Missing mandatory clause: {clause}',
@@ -197,170 +181,163 @@ class ComplianceChecker:
                     'suggestion': f'Add {clause} clause as required for {process_type}'
                 })
         
-        return issues
-    
-    def _check_jurisdiction_compliance(self, doc_data: Dict[str, Any], process_type: str) -> List[Dict[str, Any]]:
-        """Check jurisdiction compliance"""
+        print(f"🔍 Mandatory clause summary: {len(matches)} found, {len(issues)} missing")
+        return {'issues': issues, 'matches': matches}
+
+    def _debug_jurisdiction(self, doc_data: Dict[str, Any]) -> Dict:
+        """Debug jurisdiction detection"""
+        print(f"🔍 Checking jurisdiction compliance...")
+        
         issues = []
-        
-        if process_type not in self.process_requirements:
-            return issues
-        
-        requirements = self.process_requirements[process_type]
+        matches = []
         content = doc_data.get('content', '')
+        content_lower = content.lower()
         
-        # Check if ADGM jurisdiction is properly referenced
-        adgm_mentioned = any(req in content for req in requirements['jurisdiction_requirements'])
-        
-        if not adgm_mentioned:
-            issues.append({
-                'location': 'Jurisdiction Clause',
-                'issue': 'ADGM jurisdiction not properly specified',
-                'severity': 'High',
-                'category': 'jurisdiction',
-                'suggestion': 'Specify ADGM as the governing jurisdiction and court system'
-            })
-        
-        # Check for incorrect UAE federal references
-        federal_patterns = [
-            r'UAE Federal Court',
-            r'Dubai International Financial Centre(?!.*ADGM)',
-            r'UAE Commercial Code(?!.*ADGM)'
+        # Check for positive ADGM references
+        adgm_indicators = [
+            'adgm',
+            'abu dhabi global market',
+            'adgm courts',
+            'adgm companies regulations'
         ]
         
-        for pattern in federal_patterns:
-            if re.search(pattern, content, re.IGNORECASE):
-                issues.append({
-                    'location': 'Jurisdiction Reference',
-                    'issue': 'Incorrect reference to UAE federal jurisdiction',
-                    'severity': 'High',
+        print(f"🔍 Searching for ADGM indicators: {adgm_indicators}")
+        
+        for indicator in adgm_indicators:
+            if indicator.lower() in content_lower:
+                print(f"✅ FOUND ADGM indicator: '{indicator}'")
+                matches.append({
                     'category': 'jurisdiction',
-                    'suggestion': 'Replace with ADGM jurisdiction and regulations'
+                    'indicator': indicator,
+                    'content': indicator,
+                    'found': True
                 })
         
-        return issues
-    
-    def _check_formatting_requirements(self, doc_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Check formatting requirements"""
+        # Check for problematic references
+        problematic_refs = ['uae federal court', 'dubai court']
+        
+        for ref in problematic_refs:
+            if ref.lower() in content_lower:
+                print(f"❌ FOUND problematic reference: '{ref}'")
+                issues.append({
+                    'location': 'Jurisdiction Clause',
+                    'issue': f'Incorrect jurisdiction reference: {ref}',
+                    'severity': 'High',
+                    'category': 'jurisdiction',
+                    'suggestion': 'Update to specify ADGM as governing jurisdiction'
+                })
+        
+        print(f"🔍 Jurisdiction summary: {len(matches)} positive, {len(issues)} problematic")
+        return {'issues': issues, 'matches': matches}
+
+    def _debug_red_flags(self, doc_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Debug red flag detection"""
+        print(f"🔍 Checking for red flags...")
+        
         issues = []
+        content = doc_data.get('content', '')
         
-        structure = doc_data.get('structure', {})
+        for flag in self.red_flag_patterns:
+            matches = re.finditer(flag['pattern'], content, re.IGNORECASE)
+            match_count = 0
+            
+            for match in matches:
+                match_count += 1
+                print(f"❌ RED FLAG: Found '{match.group()}' - {flag['issue']}")
+                issues.append({
+                    'location': f'Position {match.start()}',
+                    'issue': flag['issue'],
+                    'severity': flag['severity'],
+                    'category': flag['category'],
+                    'suggestion': 'Update to comply with ADGM requirements',
+                    'matched_text': match.group()
+                })
+            
+            if match_count == 0:
+                print(f"✅ No matches for red flag pattern: {flag['pattern']}")
         
-        # Check for signature section
-        if not structure.get('has_signature_section', False):
-            issues.append({
-                'location': 'Document End',
-                'issue': 'Missing signature section',
-                'severity': 'Medium',
-                'category': 'formatting',
-                'suggestion': 'Add proper signature section with witness requirements'
-            })
-        
-        # Check for date section
-        if not structure.get('has_date_section', False):
-            issues.append({
-                'location': 'Document Header/Footer',
-                'issue': 'Missing date section',
-                'severity': 'Low',
-                'category': 'formatting',
-                'suggestion': 'Add document execution date'
-            })
-        
-        # Check heading structure
-        if len(structure.get('headings', [])) == 0:
-            issues.append({
-                'location': 'Document Structure',
-                'issue': 'No proper heading structure found',
-                'severity': 'Low',
-                'category': 'formatting',
-                'suggestion': 'Use proper heading styles for better document structure'
-            })
-        
+        print(f"🔍 Red flag summary: {len(issues)} issues found")
         return issues
-    
-    def _check_signature_requirements(self, doc_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Check signature requirements"""
-        issues = []
-        content = doc_data.get('content', '').lower()
+
+    def _debug_calculate_score(self, issues: List[Dict], positive_matches: List[Dict], process_type: str) -> float:
+        """Debug score calculation with detailed logging"""
+        print(f"\n🔍 CALCULATING COMPLIANCE SCORE...")
+        print(f"   Input issues: {len(issues)}")
+        print(f"   Input positive matches: {len(positive_matches)}")
         
-        # Required signature elements
-        signature_elements = [
-            ('signature', 'Signature line'),
-            ('witness', 'Witness section'),
-            ('date', 'Date field')
-        ]
-        
-        missing_elements = []
-        for element, description in signature_elements:
-            if element not in content:
-                missing_elements.append(description)
-        
-        if missing_elements:
-            issues.append({
-                'location': 'Signature Section',
-                'issue': f'Missing signature elements: {", ".join(missing_elements)}',
-                'severity': 'Medium',
-                'category': 'signatures',
-                'suggestion': 'Add complete signature section with all required elements'
-            })
-        
-        return issues
-    
-    def _find_paragraph_location(self, content: str, position: int) -> str:
-        """Find paragraph containing the position"""
-        lines = content.split('\n')
-        current_pos = 0
-        
-        for i, line in enumerate(lines):
-            if current_pos <= position <= current_pos + len(line):
-                return f'Paragraph {i + 1}: {line[:50]}...' if len(line) > 50 else f'Paragraph {i + 1}: {line}'
-            current_pos += len(line) + 1  # +1 for newline
-        
-        return 'Unknown location'
-    
-    def _get_red_flag_suggestion(self, category: str, issue: str) -> str:
-        """Get suggestion for red flag issue"""
-        suggestions = {
-            'jurisdiction': 'Update to specify ADGM as governing jurisdiction',
-            'completeness': 'Fill in all template placeholders with actual values',
-            'clarity': 'Use clear, definitive legal language',
-            'formatting': 'Follow ADGM document formatting requirements'
+        category_weights = {
+            'jurisdiction': 25,
+            'mandatory_clauses': 25,
+            'document_type': 15,
+            'formatting': 15,
+            'signatures': 10,
+            'red_flags': 10
         }
         
-        return suggestions.get(category, 'Review and correct as per ADGM requirements')
-    
+        total_score = 0
+        
+        for category, max_points in category_weights.items():
+            category_issues = [issue for issue in issues if issue.get('category') == category]
+            category_matches = [match for match in positive_matches if match.get('category') == category]
+            
+            print(f"\n🔍 Category: {category} (max {max_points} points)")
+            print(f"   Issues: {len(category_issues)}")
+            print(f"   Matches: {len(category_matches)}")
+            
+            if category == 'jurisdiction':
+                adgm_found = any('adgm' in str(match.get('content', '')).lower() 
+                               for match in category_matches)
+                if adgm_found:
+                    points = max_points
+                    print(f"   ✅ ADGM found - awarding {points} points")
+                elif category_issues:
+                    points = 0
+                    print(f"   ❌ Issues found - awarding 0 points")
+                else:
+                    points = max_points * 0.5
+                    print(f"   ⚠️ No clear indication - awarding {points} points")
+                total_score += points
+                
+            elif category == 'mandatory_clauses':
+                required_clauses = self.process_requirements.get(process_type, {}).get('mandatory_clauses', [])
+                if required_clauses:
+                    percentage = min(len(category_matches) / len(required_clauses), 1.0)
+                    points = max_points * percentage
+                    print(f"   📊 Found {len(category_matches)}/{len(required_clauses)} clauses - awarding {points} points")
+                else:
+                    points = max_points
+                    print(f"   ✅ No requirements - awarding {points} points")
+                total_score += points
+                
+            else:
+                if category_issues:
+                    points = 0
+                    print(f"   ❌ Has issues - awarding 0 points")
+                else:
+                    points = max_points
+                    print(f"   ✅ No issues - awarding {points} points")
+                total_score += points
+        
+        final_score = min(max(total_score, 0), 100)
+        print(f"\n🎯 SCORE CALCULATION COMPLETE:")
+        print(f"   Total raw score: {total_score}")
+        print(f"   Final score (0-100): {final_score}")
+        
+        return final_score
+
     def generate_compliance_report(self, results: Dict[str, Any]) -> str:
-        """Generate a detailed compliance report"""
-        report = f"""
-        ADGM COMPLIANCE ANALYSIS REPORT
-        Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-        
-        OVERALL COMPLIANCE STATUS: {'COMPLIANT' if results['is_compliant'] else 'NON-COMPLIANT'}
-        Compliance Score: {results['compliance_score']:.1f}%
-        Total Issues Found: {results['total_issues']}
-        
-        ISSUES BREAKDOWN:
+        """Generate detailed compliance report"""
+        return f"""
+ADGM COMPLIANCE ANALYSIS REPORT
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+OVERALL COMPLIANCE STATUS: {'COMPLIANT' if results['is_compliant'] else 'NON-COMPLIANT'}
+Compliance Score: {results['compliance_score']:.1f}%
+Total Issues Found: {results['total_issues']}
+Total Positive Matches: {results.get('positive_matches', 0)}
+
+DEBUG INFO:
+- Content Length: {results.get('debug_info', {}).get('content_length', 'Unknown')}
+- Mandatory Matches: {results.get('debug_info', {}).get('mandatory_matches', 0)}
+- Jurisdiction Matches: {results.get('debug_info', {}).get('jurisdiction_matches', 0)}
         """
-        
-        if results['issues']:
-            severity_counts = {}
-            for issue in results['issues']:
-                severity = issue['severity']
-                severity_counts[severity] = severity_counts.get(severity, 0) + 1
-            
-            for severity, count in severity_counts.items():
-                report += f"- {severity} Priority: {count} issues\n"
-            
-            report += "\nDETAILED ISSUES:\n"
-            for i, issue in enumerate(results['issues'], 1):
-                report += f"""
-                {i}. {issue['issue']}
-                   Location: {issue['location']}
-                   Severity: {issue['severity']}
-                   Category: {issue['category']}
-                   Suggestion: {issue['suggestion']}
-                """
-        else:
-            report += "No compliance issues found."
-        
-        return report
