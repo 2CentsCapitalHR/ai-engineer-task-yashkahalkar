@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
 from components.document_parser import DocumentParser
 from components.rag_engine import RAGEngine
 from components.compliance_checker import ComplianceChecker
@@ -11,7 +10,19 @@ import json
 from datetime import datetime
 
 # Load environment variables
-load_dotenv()
+def get_env_var(key: str, default: str = None) -> str:
+    """Get environment variable with Streamlit secrets fallback"""
+    try:
+        # Try Streamlit secrets first (for cloud deployment)
+        return st.secrets[key]
+    except (KeyError, FileNotFoundError, AttributeError):
+        # Fallback to environment variables (for local development)
+        value = os.getenv(key, default)
+        if not value and default is None:
+            st.error(f"❌ Missing required environment variable: {key}")
+            st.write("Please set this in Streamlit Secrets or your .env file")
+            st.stop()
+        return value or default
 
 # Page configuration
 st.set_page_config(
